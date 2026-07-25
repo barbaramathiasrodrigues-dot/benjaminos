@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🐹 Benjamin OS — Cuidado e Bem-Estar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    body {
+      background: linear-gradient(135deg, #2a1b15 0%, #1c130e 100%);
+      color: #fdf8f6;
+      min-height: 100vh;
+    }
+    .glass-card {
+      background: rgba(45, 30, 22, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 235, 220, 0.12);
+    }
+  </style>
+</head>
+<body class="p-4 md:p-8 font-sans">
+
+  <div x-data="benjaminApp()" x-init="initFirebase()" class="max-w-md mx-auto space-y-5">
+
+    <!-- HEADER: BENJAMIN OS (HUD DE BEM-ESTAR) -->
+    <header class="glass-card rounded-3xl p-6 shadow-xl text-center border border-amber-900/40">
+      <div class="flex justify-between items-center mb-2">
+        <span class="text-xs font-bold uppercase tracking-widest text-amber-400">Cuidado com Seres Vivos</span>
+        <span x-show="loading" class="text-xs text-amber-300 bg-amber-950/60 px-2.5 py-1 rounded-full animate-pulse border border-amber-800">Sync...</span>
+      </div>
+      <h1 class="text-2xl font-black text-white flex items-center justify-center gap-2">
+        🐹 Benjamin OS
+      </h1>
+      <p class="text-xs text-amber-200/70 mt-1 italic">Presença, Conforto e Manejo Express</p>
+
+      <!-- BARRA DE CONFORTO DO BENJAMIN -->
+      <div class="mt-4 bg-amber-950/60 p-3.5 rounded-2xl border border-amber-900/40">
+        <div class="flex justify-between text-xs font-bold mb-1.5">
+          <span class="text-amber-200/80">Nível de Conforto da Toca</span>
+          <span class="text-amber-400 font-extrabold" x-text="confortoPercent + '%'"></span>
+        </div>
+        <div class="w-full bg-slate-900 rounded-full h-3.5 overflow-hidden p-0.5 border border-amber-900/30">
+          <div class="bg-gradient-to-r from-amber-500 via-orange-400 to-emerald-400 h-full rounded-full transition-all duration-500" :style="'width: ' + confortoPercent + '%'"></div>
+        </div>
+      </div>
+    </header>
+
+    <!-- TELA PRINCIPAL: MODO RECURSOS & OBSERVAÇÃO -->
+    <template x-if="modo === 'home'">
+      <div class="space-y-4">
+        
+        <!-- MATRIZ DE RECURSOS / STATUS RÁPIDO -->
+        <div class="grid grid-cols-2 gap-3 text-xs">
+          <div class="glass-card p-3.5 rounded-2xl border-l-4 border-l-emerald-500">
+            <span class="text-slate-400 block text-[10px] uppercase font-bold">💧 Água Fresca</span>
+            <span class="text-emerald-400 font-black text-sm" x-text="statusAgua"></span>
+          </div>
+          <div class="glass-card p-3.5 rounded-2xl border-l-4 border-l-amber-500">
+            <span class="text-slate-400 block text-[10px] uppercase font-bold">🏠 Higiene Toca</span>
+            <span class="text-amber-400 font-black text-sm" x-text="statusHigiene"></span>
+          </div>
+        </div>
+
+        <!-- BOTÃO AÇÃO EXPRESS -->
+        <button @click="iniciarExpress()" class="w-full py-5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-black text-lg rounded-2xl shadow-lg transition active:scale-95 flex items-center justify-center gap-2">
+          ⚡ BENJAMIN EXPRESS (1-3 MIN)
+        </button>
+
+        <!-- MODO OLHAR E OBSERVAR -->
+        <button @click="modo = 'observacao'" class="w-full py-3.5 bg-amber-950/40 hover:bg-amber-900/50 border border-amber-800/60 text-amber-200 font-bold rounded-2xl text-xs transition flex items-center justify-center gap-2">
+          👀 Olhar para o Benjamin (Check de Saúde)
+        </button>
+
+      </div>
+    </template>
+
+    <!-- TELA: MODO BENJAMIN EXPRESS (GPS DE MANEJO) -->
+    <template x-if="modo === 'express'">
+      <div class="glass-card rounded-3xl p-6 shadow-xl border border-amber-500/40 space-y-4">
+        
+        <div class="flex justify-between items-center text-xs font-bold text-amber-400 uppercase tracking-wider">
+          <span>⚡ Manejo Express</span>
+          <span x-text="'Passo ' + (passoExpress + 1) + ' de ' + listaExpress.length"></span>
+        </div>
+
+        <div class="bg-amber-950/50 p-4 rounded-2xl border border-amber-900/60 space-y-2">
+          <div class="flex items-center gap-3">
+            <span class="text-3xl" x-text="listaExpress[passoExpress].icon"></span>
+            <div>
+              <h3 class="text-base font-bold text-white" x-text="listaExpress[passoExpress].titulo"></h3>
+              <p class="text-xs text-amber-200/70 mt-0.5" x-text="listaExpress[passoExpress].desc"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- BOTÃO AVANÇAR PASSO -->
+        <button @click="proximoPassoExpress()" class="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black text-base rounded-2xl shadow-lg transition active:scale-95">
+          ✔ CONCLUÍDO
+        </button>
+      </div>
+    </template>
+
+    <!-- TELA: PERGUNTA FINAL DE ÁGUA DA ROTA EXPRESS -->
+    <template x-if="modo === 'express_agua'">
+      <div class="glass-card rounded-3xl p-6 shadow-xl border border-sky-500/40 space-y-4">
+        <div class="flex items-center gap-3">
+          <span class="text-3xl">💧</span>
+          <div>
+            <h3 class="text-base font-bold text-white">Como está a água do Benjamin?</h3>
+            <p class="text-xs text-slate-400">Verificação rápida de hidratação.</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 pt-2">
+          <button @click="finalizarExpress(true)" class="py-4 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 text-emerald-300 font-bold rounded-2xl text-sm">
+            🟢 Está Limpa e Cheia
+          </button>
+          <button @click="finalizarExpress(false)" class="py-4 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 font-bold rounded-2xl text-sm">
+            🔄 Precisa Trocar
+          </button>
+        </div>
+      </div>
+    </template>
+
+    <!-- TELA: MODO OBSERVAÇÃO DE SAÚDE -->
+    <template x-if="modo === 'observacao'">
+      <div class="glass-card rounded-3xl p-6 shadow-xl border border-amber-500/40 space-y-4">
+        <div class="flex justify-between items-center">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-amber-400">👀 Check-in Visual de Saúde</h3>
+          <button @click="modo = 'home'" class="text-xs text-slate-400 underline">Voltar</button>
+        </div>
+
+        <p class="text-xs text-slate-300">Percebeu algum comportamento diferente no Benjamin hoje?</p>
+
+        <div class="space-y-2 text-xs">
+          <button @click="registrarObservacao('Normal / Ativo')" class="w-full p-3 bg-slate-800/80 hover:bg-slate-700 text-left rounded-xl font-medium text-slate-200 border border-slate-700/50 flex items-center gap-2">
+            😊 Normal e Ativo
+          </button>
+          <button @click="registrarObservacao('Comeu menos')" class="w-full p-3 bg-slate-800/80 hover:bg-slate-700 text-left rounded-xl font-medium text-amber-300 border border-slate-700/50 flex items-center gap-2">
+            🥕 Comeu menos feno/ração
+          </button>
+          <button @click="registrarObservacao('Bebeu menos')" class="w-full p-3 bg-slate-800/80 hover:bg-slate-700 text-left rounded-xl font-medium text-amber-300 border border-slate-700/50 flex items-center gap-2">
+            💧 Bebeu pouca água
+          </button>
+          <button @click="registrarObservacao('Quieto / Paradinho')" class="w-full p-3 bg-slate-800/80 hover:bg-slate-700 text-left rounded-xl font-medium text-amber-300 border border-slate-700/50 flex items-center gap-2">
+            😴 Muito quieto ou prostrado
+          </button>
+        </div>
+      </div>
+    </template>
+
+    <!-- HISTÓRICO DE MANEJO -->
+    <div class="glass-card rounded-3xl p-5 shadow-xl space-y-2 border border-amber-900/30">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-amber-400/80">Histórico de Cuidado</h3>
+      <div class="text-xs text-slate-300 space-y-1">
+        <div class="flex justify-between">
+          <span class="text-slate-400">Última Higiene Express:</span>
+          <strong class="text-amber-200" x-text="ultimaHigiene"></strong>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">Última Observação:</span>
+          <strong class="text-amber-200" x-text="ultimaObs"></strong>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FIREBASE INTERFACE MODULE (PROJETO BENJAMIN-EXPRESS-OS) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBoCzavo5Poj1kjKZbJ9rUwkLQyyjpMgmI",
+      authDomain: "benjamin-express-os.firebaseapp.com",
+      projectId: "benjamin-express-os",
+      storageBucket: "benjamin-express-os.firebasestorage.app",
+      messagingSenderId: "318003877871",
+      appId: "1:318003877871:web:54f4390f54c7710c5cc81a",
+      measurementId: "G-41JWT5ZN72"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    window.db = db;
+    window.doc = doc;
+    window.setDoc = setDoc;
+    window.onSnapshot = onSnapshot;
+  </script>
+
+  <!-- LÓGICA DO APP (AlpineJS) -->
+  <script>
+    function benjaminApp() {
+      return {
+        loading: true,
+        modo: 'home',
+        confortoPercent: 80,
+        statusAgua: '🟢 Limpa',
+        statusHigiene: '🟢 Ok',
+        ultimaHigiene: 'Hoje',
+        ultimaObs: 'Normal / Ativo',
+        passoExpress: 0,
+
+        listaExpress: [
+          { titulo: 'Pegar 1 Saquinho de Lixo', icon: '🗑️', desc: 'Preparo rápido de 10 segundos.' },
+          { titulo: 'Catar Restos de Comida', icon: '🥬', desc: 'Retirar vegetais ou feno velhos.' },
+          { titulo: 'Catar Cocôs Grandes', icon: '💩', desc: 'Limpar apenas os cocôs aparentes.' },
+          { titulo: 'Fechar e Descartar', icon: '🚮', desc: 'Amarrar o saquinho e jogar na lixeira.' }
+        ],
+
+        async initFirebase() {
+          const checkDb = setInterval(() => {
+            if (window.db) {
+              clearInterval(checkDb);
+              const docRef = window.doc(window.db, "modo_casa", "benjamin");
+              window.onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                  const data = docSnap.data();
+                  this.confortoPercent = data.confortoPercent ?? 80;
+                  this.statusAgua = data.statusAgua ?? '🟢 Limpa';
+                  this.statusHigiene = data.statusHigiene ?? '🟢 Ok';
+                  this.ultimaHigiene = data.ultimaHigiene ?? 'Hoje';
+                  this.ultimaObs = data.ultimaObs ?? 'Normal / Ativo';
+                }
+                this.loading = false;
+              });
+            }
+          }, 100);
+        },
+
+        async saveState() {
+          if (!window.db) return;
+          const payload = {
+            confortoPercent: this.confortoPercent,
+            statusAgua: this.statusAgua,
+            statusHigiene: this.statusHigiene,
+            ultimaHigiene: this.ultimaHigiene,
+            ultimaObs: this.ultimaObs,
+            updatedAt: new Date().toISOString()
+          };
+          const docRef = window.doc(window.db, "modo_casa", "benjamin");
+          await window.setDoc(docRef, payload, { merge: true });
+        },
+
+        iniciarExpress() {
+          this.passoExpress = 0;
+          this.modo = 'express';
+        },
+
+        proximoPassoExpress() {
+          if (this.passoExpress < this.listaExpress.length - 1) {
+            this.passoExpress++;
+          } else {
+            this.modo = 'express_agua';
+          }
+        },
+
+        finalizarExpress(aguaLimpa) {
+          this.confortoPercent = 100;
+          this.statusHigiene = '🟢 Ok';
+          this.statusAgua = aguaLimpa ? '🟢 Limpa' : '🔄 Trocada';
+          this.ultimaHigiene = 'Hoje';
+          this.modo = 'home';
+          this.saveState();
+        },
+
+        registrarObservacao(obs) {
+          this.ultimaObs = obs;
+          this.modo = 'home';
+          this.saveState();
+        }
+      }
+    }
+  </script>
+</body>
+</html>
